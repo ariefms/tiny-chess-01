@@ -6,7 +6,6 @@ J=[-21,-19,-12,-8,8,12,19,21]
 I=[-11,-10,-9,-1,1,9,10,11]
 G=[-11,-9,9,11]
 O=[-10,-1,1,10]
-D=[J,G,O,I,I]
 SQ=[x for x in range(21,99)if x%10%9]
 CT=[0]*120
 for s in SQ:CT[s]=min(s%10-1,8-s%10)+min(s//10-2,9-s//10)
@@ -34,14 +33,14 @@ def parse(f):
  r=9;c=1;K=0;k=0
  for ch in a[0]:
   if ch=='/':r-=1;c=1
-  elif ch.isdigit():c+=int(ch)
+  elif ch<'A':c+=int(ch)
   else:
    q=r*10+c;v='PNBRQKpnbrqk'.index(ch)+1+2*(ch>'Z');W[q]=v
    if v==6:K=q
    elif v==14:k=q
    c+=1
  C=sum({'K':2,'Q':1,'k':8,'q':4}.get(ch,0)for ch in a[2])
- E=0 if a[3]=='-'else(int(a[3][1])+1)*10+ord(a[3][0])-96
+ E=0 if a[3]=='-'else ord(a[3][0])+10*int(a[3][1])-86
  B=bytes(W)
  if a[1]=='b':
   B=rot(B);C=REV[C];E=Z-E;K,k=k and Z-k,K and Z-K
@@ -52,12 +51,12 @@ def mv(P,m):
  p=B[f];q=B[t]
  W=bytearray(B)
  if p==1 and t==E and not q:W[t-10]=0
- W[t]=pr if pr else p;W[f]=0
+ W[t]=pr or p;W[f]=0
  if p==6:
   K=t
   if abs(t-f)==2:
    d=t>f;r=21+7*d;W[f+2*d-1],W[r]=W[r],0
- C&=CK.get(f,15)&CK.get(t,15)&(12 if p==6 else 15)
+ C&=CK.get(f,15)&CK.get(t,15)&(15-3*(p==6))
  E=(f+t)//2 if p==1 and abs(t-f)==20 else 0
  W=bytes(W)
  if att(W,K):return None
@@ -84,7 +83,7 @@ def gen(P,cp,tt=0):
      else:A((1e3+V[q&7],f|o<<7))
     elif o==E:A((1e3,f|o<<7))
   else:
-   for d in D[p-2]:
+   for d in(J,G,O,I,I)[p-2]:
     o=f+d
     while B[o]==0:
      if not cp:A((0,f|o<<7))
@@ -95,7 +94,7 @@ def gen(P,cp,tt=0):
   k=K
   for s,R,b,x in((1,28,2,27),(-1,21,1,22)):
    if C&b and B[k+s]==B[k+2*s]==B[x]==0 and B[R]==4 and att(B,k+s)==att(B,k+2*s)==0:A((0,k|(k+2*s)<<7))
- ms.sort(key=lambda x:x[0]+(x[1]==tt)*1e5,reverse=True)
+ ms.sort(key=lambda x:x[0]+(x[1]==tt)*1e5,reverse=1)
  return[m for _,m in ms]
 def ev(B):
  s=0
@@ -123,7 +122,7 @@ def qs(P,a,b,pl):
   s=-qs(Q,-b,-a,pl+1)
   if s>=b:return b
   a=max(a,s)
- if inchk and not n:return -10**5+pl
+ if inchk and not n:return-1e5+pl
  return a
 def sr(P,d,a,b,pl):
  global N,BM
@@ -132,6 +131,7 @@ def sr(P,d,a,b,pl):
  B,C,E,K,k=P
  if d<=0:return qs(P,a,b,pl)
  key=(B,C,E)
+ if pl and key in H:return 0
  e=TT.get(key);tt=0
  if e and e[0]>=d and e[2]==0:return e[1]
  if e:tt=e[3]
@@ -141,32 +141,33 @@ def sr(P,d,a,b,pl):
   if not Q:continue
   n+=1
   s=-sr(Q,d-1,-b,-a,pl+1)
-  if s>a:a=s;bm=m;BM=m if pl==0 else BM
+  if s>a:a=s;bm=m;BM=m*(not pl)or BM
   if s>=b:
    TT[key]=(d,1,s,m)
    return b
- if not n:return -10**5+pl if att(B,K)else 0
- TT[key]=(d,0 if bm else 1,a,bm)
+ if not n:return-1e5+pl if att(B,K)else 0
+ TT[key]=(d,1-(bm!=0),a,bm)
  return a
 def post(p,b):
  return json.load(u.urlopen(E+p,json.dumps(b).encode()))
 def choose(g):
  P=parse(g['fen'])
  L=g['legal_moves']
+ H.add(P[:3])
  global N,BM
  N=0;BM=0
  for d in range(1,99):
-  try:sr(P,d,-10**6,10**6,0)
+  try:sr(P,d,-1e6,1e6,0)
   except X:break
  if not BM:return L[0]
  f=BM&127;t=(BM>>7)&127;pr=BM>>14
  if ' b ' in g['fen']:f,t=Z-f,Z-t
- s=chr(96+f%10)+str(f//10-1)+chr(96+t%10)+str(t//10-1)
+ s=''.join(chr(96+v%10)+str(v//10-1)for v in(f,t))
  if pr:s+='nbrq'[pr-2]
  if s not in L:return L[0]
  return s
 while True:
- g=post('/game',{})
+ g=post('/game',{});H=set()
  if g['status']=='done':break
  while g['status']=='your_move':
   F=g['legal_moves'][0]
