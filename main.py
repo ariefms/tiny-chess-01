@@ -9,15 +9,15 @@ O=[-10,-1,1,10]
 SQ=[x for x in range(21,99)if x%10%9]
 CT=[0]*120
 for s in SQ:CT[s]=min(s%10-1,8-s%10)+min(s//10-2,9-s//10)
-FLIP=bytes(i^8*(0<i<7 or 8<i<15)for i in range(256))
+FLIP=bytes(i^8*(0<i%8<7)for i in range(256))
 REV=[0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 CK={21:14,28:13,91:11,98:7}
 TT={}
-N=0;NB=2e5;BM=0;Z=119
+N=0;NB=3e5;BM=0;Z=119
 class X(Exception):pass
 def rot(B):return B[::-1].translate(FLIP)
 def att(B,s):
- if B[s+9]==9 or B[s+11]==9:return 1
+ if 9in(B[s+9],B[s+11]):return 1
  for L,v in((J,10),(I,14)):
   for t in L:
    if B[s+t]==v:return 1
@@ -94,15 +94,15 @@ def gen(P,cp,tt=0):
   k=K
   for s,R,b,x in((1,28,2,27),(-1,21,1,22)):
    if C&b and B[k+s]==B[k+2*s]==B[x]==0 and B[R]==4 and att(B,k+s)==att(B,k+2*s)==0:A((0,k|(k+2*s)<<7))
- ms.sort(key=lambda x:x[0]+(x[1]==tt)*1e5,reverse=1)
+ ms.sort(key=lambda x:-x[0]-(x[1]==tt)*1e5)
  return[m for _,m in ms]
 def ev(B):
  s=0
  for q in SQ:
   p=B[q]
   if p:
-   t=p&7;v=V[t]+M[t]*CT[q]
-   s+=v if p<8 else-v
+   v=V[p&7]+M[p&7]*CT[q]
+   s+=v*(p<8or-1)
  return s
 def qs(P,a,b,pl):
  global N
@@ -133,7 +133,7 @@ def sr(P,d,a,b,pl):
  key=(B,C,E)
  if pl and key in H:return 0
  e=TT.get(key);tt=0
- if e and e[0]>=d and e[2]==0:return e[1]
+ if e and e[0]>=d and(e[1]<1 or(e[2]>=b if e[1]<2 else e[2]<=a)):return e[2]
  if e:tt=e[3]
  bm=0;n=0
  for m in gen(P,0,tt):
@@ -145,8 +145,8 @@ def sr(P,d,a,b,pl):
   if s>=b:
    TT[key]=(d,1,s,m)
    return b
- if not n:return-1e5+pl if att(B,K)else 0
- TT[key]=(d,1-(bm!=0),a,bm)
+ if not n:return(-1e5+pl)*att(B,K)
+ TT[key]=(d,2*(bm==0),a,bm)
  return a
 def post(p,b):
  return json.load(u.urlopen(E+p,json.dumps(b).encode()))
@@ -156,7 +156,7 @@ def choose(g):
  H.add(P[:3])
  global N,BM
  N=0;BM=0
- for d in range(1,99):
+ for d in range(99):
   try:sr(P,d,-1e6,1e6,0)
   except X:break
  if not BM:return L[0]
